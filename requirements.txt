@@ -7,3 +7,6 @@ python-dotenv
 langchain-tavily
 Pillow
 requests
+fastapi
+uvicorn
+python-multipart

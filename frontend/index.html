@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Blog Reader</title>
+    <!-- Marked for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Highlight.js for syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --sidebar-bg: #2c3e50;
+            --sidebar-text: #ecf0f1;
+            --content-bg: #ffffff;
+            --text-color: #333;
+            --accent-color: #3498db;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* Sidebar Styles */
+        #sidebar {
+            width: 300px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+        #sidebar h2 {
+            padding: 20px;
+            margin: 0;
+            background-color: #1a252f;
+            font-size: 1.2rem;
+            text-align: center;
+            border-bottom: 1px solid #34495e;
+        }
+
+        #post-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .post-item {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .post-item:hover {
+            background-color: #34495e;
+        }
+
+        .post-item.active {
+            background-color: var(--accent-color);
+            border-left: 4px solid #fff;
+        }
+
+        .post-title {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .post-date {
+            font-size: 0.8rem;
+            color: #bdc3c7;
+        }
+
+        /* Main Content Styles */
+        #main-content {
+            flex-grow: 1;
+            padding: 40px;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+        }
+
+        #article-container {
+            max-width: 800px;
+            width: 100%;
+            background: var(--content-bg);
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            min-height: 200px;
+        }
+
+        /* Markdown Content Styling */
+        #content h1, #content h2, #content h3 {
+            color: #2c3e50;
+            margin-top: 1.5em;
+        }
+        
+        #content h1 { border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        
+        #content p {
+            line-height: 1.6;
+            margin-bottom: 1.2em;
+        }
+
+        #content code {
+            background-color: #f8f8f8;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+
+        #content pre {
+            background-color: #282c34;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        
+        #content pre code {
+            background-color: transparent;
+            color: #abb2bf;
+            padding: 0;
+        }
+
+        #content blockquote {
+            border-left: 4px solid var(--accent-color);
+            margin: 0;
+            padding-left: 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
+        #content img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        /* Loading & Error States */
+        .message {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+        
+        .error {
+            color: #e74c3c;
+        }
+        
+        .loading {
+            color: var(--accent-color);
+        }
+
+        /* Buttons & Forms */
+        .btn {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: var(--accent-color);
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: #2980b9; }
+        .btn:disabled { background-color: #95a5a6; cursor: not-allowed; }
+        .btn-block { display: block; width: 100%; text-align: center; margin-bottom: 10px; box-sizing: border-box; }
+        .btn-secondary { background-color: #95a5a6; font-size: 0.9rem; padding: 5px 10px; }
+        .btn-secondary:hover { background-color: #7f8c8d; }
+
+        #create-form {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input { 
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; box-sizing: border-box;
+        }
+
+        .header-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            #sidebar { width: 100%; height: auto; max-height: 300px; }
+            #main-content { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <aside id="sidebar">
+        <h2>Blog Posts</h2>
+        <div style="padding: 15px;">
+            <button class="btn btn-block" onclick="showCreateForm()">+ New Post</button>
+        </div>
+        <ul id="post-list">
+            <!-- Posts will be loaded here -->
+            <li class="message loading">Loading posts...</li>
+        </ul>
+    </aside>
+
+    <main id="main-content">
+        <article id="article-container">
+            <div id="content">
+                <div class="message">Select a post from the sidebar to read.</div>
+            </div>
+        </article>
+    </main>
+
+    <script>
+        const API_BASE_URL = '/api'; // Use relative path for Vercel deployment (handled by rewrites)
+        const postListEl = document.getElementById('post-list');
+        const contentEl = document.getElementById('content');
+
+        // Initialize Highlight.js
+        hljs.highlightAll();
+
+        // Fetch list of posts
+        async function fetchPosts(activeFilename = null) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts`);
+                if (!response.ok) throw new Error('Failed to fetch posts');
+                
+                const posts = await response.json();
+                renderPostList(posts, activeFilename);
+                
+                // Load first post automatically if available and no active post
+                if (!activeFilename && posts.length > 0 && contentEl.querySelector('.message.loading')) {
+                    // loadPost(posts[0].filename);
+                    showCreateForm();
+                } else if (!activeFilename) {
+                    showCreateForm();
+                }
+            } catch (error) {
+                console.error(error);
+                postListEl.innerHTML = `<li class="message error">Error loading posts. Is the backend running?</li>`;
+            }
+        }
+
+        // Render list of posts in sidebar
+        function renderPostList(posts, activeFilename) {
+            postListEl.innerHTML = '';
+            
+            if (posts.length === 0) {
+                postListEl.innerHTML = '<li class="message">No posts found.</li>';
+                return;
+            }
+
+            posts.forEach(post => {
+                const li = document.createElement('li');
+                li.className = 'post-item';
+                if (post.filename === activeFilename) {
+                    li.classList.add('active');
+                }
+                li.innerHTML = `
+                    <span class="post-title">${formatTitle(post.filename)}</span>
+                    <span class="post-date">${post.last_modified}</span>
+                `;
+                li.onclick = () => {
+                    // Update active state
+                    document.querySelectorAll('.post-item').forEach(el => el.classList.remove('active'));
+                    li.classList.add('active');
+                    loadPost(post.filename);
+                };
+                postListEl.appendChild(li);
+            });
+            
+            // Set active class on first item initially if it exists and no activeFilename
+            if (!activeFilename && postListEl.firstChild) {
+                // postListEl.firstChild.classList.add('active');
+            }
+        }
+
+        // Fetch and display specific post content
+        async function loadPost(filename) {
+            contentEl.innerHTML = '<div class="message loading">Loading content...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(filename)}`);
+                if (!response.ok) throw new Error('Failed to load post content');
+                
+                const post = await response.json();
+                renderContent(post);
+            } catch (error) {
+                console.error(error);
+                contentEl.innerHTML = `<div class="message error">Error loading content: ${error.message}</div>`;
+            }
+        }
+
+        // Render markdown content to HTML
+        function renderContent(post) {
+            const htmlContent = marked.parse(post.content);
+            // Fix image paths if they are relative (assuming they start with /static/)
+            // Also handle markdown images that might be generated as ![Image](/static/...)
+            // marked.js renders them as <img src="/static/...">
+            // We need to prepend API_BASE_URL if we are not serving from the same origin (e.g. file://)
+            // But if we open index.html as a file, we definitely need the full URL.
+            
+            let fixedHtmlContent = htmlContent.replace(/src="\/static\//g, `src="${API_BASE_URL}/static/`);
+            
+            // Remove the first H1 tag as it's already displayed in the header
+            fixedHtmlContent = fixedHtmlContent.replace(/<h1[^>]*>.*?<\/h1>/i, '');
+
+            contentEl.innerHTML = `
+                <div class="header-actions">
+                    <div>
+                        <h1 style="margin:0; border:none; padding:0;">${formatTitle(post.filename)}</h1>
+                        <p style="color: #7f8c8d; font-size: 0.9em; margin: 5px 0;">Last updated: ${post.last_modified}</p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="downloadMarkdown('${post.filename}')">Download .md</button>
+                </div>
+                <div id="markdown-body" style="padding-bottom: 60px;">${fixedHtmlContent}</div>
+            `;
+            
+            // Store current content for download
+            window.currentPostContent = post.content;
+            
+            // Re-run syntax highlighting for new content
+            contentEl.querySelectorAll('pre code').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+        }
+
+        // Show form to create new post
+        function showCreateForm() {
+            // Clear active state
+            document.querySelectorAll('.post-item').forEach(el => el.classList.remove('active'));
+            
+            contentEl.innerHTML = `
+                <div id="create-form">
+                    <h1>Create New Blog Post</h1>
+                    <p>Enter a topic below and the AI agent will research, write, and generate an image for your post.</p>
+                    <form onsubmit="handleCreate(event)">
+                        <div class="form-group">
+                            <label for="topic">Topic</label>
+                            <input type="text" id="topic" name="topic" placeholder="e.g. The Future of AI Agents" required>
+                        </div>
+                        <button type="submit" class="btn">Generate Post</button>
+                    </form>
+                    <div id="generation-status" class="message" style="display:none; margin-top: 20px;">
+                        <p class="loading">Generating post... This may take up to a minute.</p>
+                        <p>Status: <span id="status-text">Researching & Writing...</span></p>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Handle create form submission
+        async function handleCreate(e) {
+            e.preventDefault();
+            const topic = document.getElementById('topic').value;
+            const statusDiv = document.getElementById('generation-status');
+            const btn = e.target.querySelector('button');
+            
+            statusDiv.style.display = 'block';
+            btn.disabled = true;
+            btn.textContent = 'Generating...';
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic })
+                });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.detail || 'Generation failed');
+                }
+                
+                const post = await response.json();
+                
+                // Refresh list and highlight the new post
+                await fetchPosts(post.filename);
+                
+                // Render the new post content
+                renderContent(post);
+                
+            } catch (error) {
+                statusDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                btn.disabled = false;
+                btn.textContent = 'Generate Post';
+            }
+        }
+
+        // Download markdown file
+        function downloadMarkdown(filename) {
+            if (!window.currentPostContent) return;
+            
+            const blob = new Blob([window.currentPostContent], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Helper to make filenames look nicer
+        function formatTitle(filename) {
+            return filename.replace('.md', '').replace(/_/g, ' ');
+        }
+
+        // Start app
+        fetchPosts();
+    </script>
+</body>
+</html>

@@ -5,3 +5,5 @@ __pycache__/
 .DS_Store
 blog_post.md
 blog_image.png
+
+.vercel

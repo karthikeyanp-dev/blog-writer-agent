@@ -44,7 +44,7 @@ def write_node(state: BlogState) -> BlogState:
     logger.info(f"Writing blog post for topic: {topic}")
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an expert blog writer. Write a comprehensive and engaging blog post based on the provided research. Use Markdown formatting with headings."),
+        ("system", "You are an expert blog writer. Write a comprehensive and engaging blog post based on the provided research. Use Markdown formatting with headings. IMPORTANT: Output ONLY the blog post content. Do NOT include any conversational text, introductions, or conclusions addressed to the user (e.g., 'Here is your blog post', 'Let me know if you need changes'). Start directly with the blog title or content."),
         ("user", "Topic: {topic}\n\nResearch:\n{research}\n\nWrite the blog post. IMPORTANT: You must include a 'Sources' section at the bottom of the post listing the URLs from the research.")
     ])
     
