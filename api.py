@@ -29,7 +29,11 @@ IMAGES_DIR = os.path.join(STATIC_DIR, "images")
 os.makedirs(DOCS_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
-app = FastAPI(title="Markdown Blog API", description="API to serve markdown files as blog posts.")
+app = FastAPI(
+    title="Markdown Blog API", 
+    description="API to serve markdown files as blog posts.",
+    root_path="/api" if IS_VERCEL else ""
+)
 
 # Mount static directory for images
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
@@ -46,8 +50,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-DOCS_DIR = "docs"
 
 class BlogPost(BaseModel):
     filename: str
