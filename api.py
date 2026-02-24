@@ -36,7 +36,21 @@ app = FastAPI(
 )
 
 # Mount static directory for images
+# Note: On Vercel, static files are served through the rewrite rule to /api/index
+# The FastAPI app handles /static routes via this mount
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+# Also serve index.html at root for Vercel (fallback)
+from fastapi.responses import FileResponse
+
+@app.get("/")
+async def root():
+    """Serve the frontend HTML."""
+    # When accessed via /api/ on Vercel, serve index.html from root
+    html_path = os.path.join(os.path.dirname(__file__), "index.html")
+    if os.path.exists(html_path):
+        return FileResponse(html_path)
+    raise HTTPException(status_code=404, detail="index.html not found")
 
 # CORS Configuration
 origins = [
