@@ -1,0 +1,9 @@
+langchain
+langchain-openai
+langchain-community
+langgraph
+pydantic-settings
+python-dotenv
+langchain-tavily
+Pillow
+requests
