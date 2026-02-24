@@ -205,10 +205,6 @@ async def get_post(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the Markdown Blog API. Visit /docs for API documentation."}
-
 if __name__ == "__main__":
     import uvicorn
     # Run the API server
