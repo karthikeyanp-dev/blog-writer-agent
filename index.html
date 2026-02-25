@@ -19,12 +19,16 @@
             --accent-color: #3498db;
         }
 
+        html {
+            background-color: var(--bg-color);
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
             padding: 0;
             display: flex;
-            height: 100vh;
+            min-height: 100vh;
             background-color: var(--bg-color);
             color: var(--text-color);
         }
@@ -232,7 +236,46 @@
     </main>
 
     <script>
-        const API_BASE_URL = '/api'; // Use relative path for Vercel deployment (handled by rewrites)
+        const apiBaseCandidates = (() => {
+            // Local file:// access (opening HTML directly)
+            if (window.location.protocol === 'file:') {
+                return ['http://127.0.0.1:8000', 'http://localhost:8000'];
+            }
+            // Vercel deployment - API is at /api/*
+            if (window.location.hostname.includes('vercel.app')) {
+                return ['/api'];
+            }
+            // Local development server (python api.py) - API is at root
+            return [''];
+        })();
+
+        let API_BASE_URL = apiBaseCandidates[0] ?? '';
+
+        async function apiFetch(path, options) {
+            let lastError;
+
+            for (const base of apiBaseCandidates) {
+                try {
+                    const response = await fetch(`${base}${path}`, options);
+                    const contentType = response.headers.get('content-type') || '';
+                    if (response.ok) {
+                        if (contentType.includes('text/html')) {
+                            continue;
+                        }
+                        API_BASE_URL = base;
+                        return response;
+                    }
+                    if (response.status === 404) {
+                        continue;
+                    }
+                    return response;
+                } catch (e) {
+                    lastError = e;
+                }
+            }
+
+            throw lastError ?? new Error('Request failed');
+        }
         const postListEl = document.getElementById('post-list');
         const contentEl = document.getElementById('content');
 
@@ -242,7 +285,7 @@
         // Fetch list of posts
         async function fetchPosts(activeFilename = null) {
             try {
-                const response = await fetch(`${API_BASE_URL}/posts`);
+                const response = await apiFetch('/posts');
                 if (!response.ok) throw new Error('Failed to fetch posts');
                 
                 const posts = await response.json();
@@ -300,7 +343,7 @@
             contentEl.innerHTML = '<div class="message loading">Loading content...</div>';
             
             try {
-                const response = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(filename)}`);
+                const response = await apiFetch(`/posts/${encodeURIComponent(filename)}`);
                 if (!response.ok) throw new Error('Failed to load post content');
                 
                 const post = await response.json();
@@ -320,7 +363,12 @@
             // We need to prepend API_BASE_URL if we are not serving from the same origin (e.g. file://)
             // But if we open index.html as a file, we definitely need the full URL.
             
-            let fixedHtmlContent = htmlContent.replace(/src="\/static\//g, `src="${API_BASE_URL}/static/`);
+            let fixedHtmlContent = htmlContent;
+            // Prepend API_BASE_URL to static paths if needed
+            // For local file:// or when API_BASE_URL has a different origin
+            if (API_BASE_URL && !API_BASE_URL.startsWith(window.location.origin)) {
+                fixedHtmlContent = fixedHtmlContent.replace(/src="\/static\//g, `src="${API_BASE_URL}/static/`);
+            }
             
             // Remove the first H1 tag as it's already displayed in the header
             fixedHtmlContent = fixedHtmlContent.replace(/<h1[^>]*>.*?<\/h1>/i, '');
@@ -381,7 +429,7 @@
             btn.textContent = 'Generating...';
             
             try {
-                const response = await fetch(`${API_BASE_URL}/generate`, {
+                const response = await apiFetch('/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ topic })
